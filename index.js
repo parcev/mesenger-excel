@@ -210,13 +210,13 @@ app.post("/webhook", async (req, res) => {
 
         resetSessionTimer(senderId);
         logStep("SESSION", `Started entry for "${itemTitle}" [User: ${senderId}]`);
-        await sendMessage(senderId, `Pridedama: "${itemTitle}". Kokia kaina už vienetą?`);
+        await sendMessage(senderId, `Dobawiam "${itemTitle}". Ile kosztuji?`);
         continue;
       }
 
       const session = userSessions[senderId];
       if (!session) {
-        await sendMessage(senderId, "Parašykite 'Add [Pavadinimas]', kad pradėtumėte naujo daikto įvedimą.");
+        //await sendMessage(senderId, "Parašykite 'Add [Pavadinimas]', kad pradėtumėte naujo daikto įvedimą.");
         continue;
       }
 
@@ -230,7 +230,7 @@ app.post("/webhook", async (req, res) => {
           } else {
             await sendMessage(
               senderId,
-              "Neteisinga kaina! Įveskite teigiamą skaičių (pvz., 12.50 arba 12,50) arba parašykite 'nie' / 'nwm' norėdami praleisti."
+              "Nieprawidłowa cena!  Napisz cyfra (np. 50,67). Jeśli nie wiesz, pisz 'nie' albo 'nwm'"
             );
             return;
           }
@@ -239,7 +239,7 @@ app.post("/webhook", async (req, res) => {
           resetSessionTimer(senderId);
 
           logStep("SESSION", `User ${senderId} set price: ${session.data.price || "[SKIPPED]"}`);
-          await sendMessage(senderId, "Koks kiekis?");
+          await sendMessage(senderId, "Skilki nada?");
           break;
         }
 
