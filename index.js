@@ -5,8 +5,33 @@ const { chromium } = require("playwright");
 const app = express();
 app.use(express.json());
 
-// In-memory conversation state management
+// In-memory session store
 const userSessions = {};
+
+// 8 minutes in milliseconds
+const INACTIVITY_TIMEOUT_MS = 8 * 60 * 1000;
+
+// Keywords that allow skipping any question
+const SKIP_WORDS = ["nie", "nwm", "niwiem", "nie wiem", "ni wiem", "hz", "idk", "xz"];
+
+function isSkipInput(text) {
+  return SKIP_WORDS.includes(text.toLowerCase());
+}
+
+// Validation Helper Functions
+function isValidPositiveNumber(input) {
+  const sanitized = input.replace(",", ".").trim();
+  // Ensures strictly positive number format (integer or decimal)
+  if (!/^\d+(\.\d+)?$/.test(sanitized)) return false;
+  const num = parseFloat(sanitized);
+  return !isNaN(num) && num > 0;
+}
+
+function isValidPositiveInteger(input) {
+  const sanitized = input.trim();
+  // Ensures strictly positive whole number (1, 2, 3...)
+  return /^[1-9]\d*$/.test(sanitized);
+}
 
 // Environment Variables from Render Dashboard
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
@@ -44,6 +69,32 @@ async function sendMessage(senderId, text, quickReplyButtons = null) {
   }
 }
 
+// Start or reset the 8-minute inactivity timer for a user session
+function resetSessionTimer(senderId) {
+  if (userSessions[senderId]?.timer) {
+    clearTimeout(userSessions[senderId].timer);
+  }
+
+  userSessions[senderId].timer = setTimeout(async () => {
+    const session = userSessions[senderId];
+    if (!session) return;
+
+    logStep("TIMEOUT", `8-minute inactivity limit reached for User [${senderId}]. Auto-submitting collected data...`);
+    await sendMessage(senderId, "⏳ 8 min. neaktyvumas: surinkti duomenys automatiškai saugomi į Excel...");
+
+    try {
+      await fillFormAndSubmit(session.data);
+      await sendMessage(senderId, "✅ Automatiškai išsaugota į Excel lentelę dėl neaktyvumo!");
+      logStep("TIMEOUT_SUCCESS", `Auto-submitted partial entry "${session.data.name}" for User ${senderId}`);
+    } catch (err) {
+      logStep("TIMEOUT_ERR", `Failed auto-submit on timeout: ${err.message}`);
+      await sendMessage(senderId, `❌ Klaida automatiškai įrašant į lentelę: ${err.message.substring(0, 100)}`);
+    }
+
+    delete userSessions[senderId];
+  }, INACTIVITY_TIMEOUT_MS);
+}
+
 // Playwright Browser Automation for Microsoft Forms
 async function fillFormAndSubmit(data) {
   logStep("PLAYWRIGHT_INIT", "Launching headless Chromium browser...");
@@ -73,23 +124,23 @@ async function fillFormAndSubmit(data) {
       throw new Error(`Form mismatch! Expected at least 6 fields, found ${count}.`);
     }
 
-    logStep("PLAYWRIGHT_FILL", `[1/6] Setting Name: "${data.name}"`);
-    await inputs.nth(0).fill(data.name);
+    logStep("PLAYWRIGHT_FILL", `[1/6] Setting Name: "${data.name || ""}"`);
+    await inputs.nth(0).fill(data.name || "");
 
-    logStep("PLAYWRIGHT_FILL", `[2/6] Setting Price: "${data.price}"`);
-    await inputs.nth(1).fill(data.price.toString());
+    logStep("PLAYWRIGHT_FILL", `[2/6] Setting Price: "${data.price || ""}"`);
+    await inputs.nth(1).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[3/6] Setting Quantity: "${data.quantity}"`);
-    await inputs.nth(2).fill(data.quantity.toString());
+    logStep("PLAYWRIGHT_FILL", `[3/6] Setting Quantity: "${data.quantity || ""}"`);
+    await inputs.nth(2).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[4/6] Setting Category: "${data.category}"`);
-    await inputs.nth(3).fill(data.category);
+    logStep("PLAYWRIGHT_FILL", `[4/6] Setting Category: "${data.category || ""}"`);
+    await inputs.nth(3).fill(data.category || "");
 
-    logStep("PLAYWRIGHT_FILL", `[5/6] Setting Status: "${data.status}"`);
-    await inputs.nth(4).fill(data.status);
+    logStep("PLAYWRIGHT_FILL", `[5/6] Setting Status: "${data.status || ""}"`);
+    await inputs.nth(4).fill(data.status || "");
 
-    logStep("PLAYWRIGHT_FILL", `[6/6] Setting URL: "${data.url}"`);
-    await inputs.nth(5).fill(data.url);
+    logStep("PLAYWRIGHT_FILL", `[6/6] Setting URL: "${data.url || ""}"`);
+    await inputs.nth(5).fill(data.url || "");
 
     logStep("PLAYWRIGHT_SUBMIT", "Searching for submit button...");
     const submitBtn = page.locator('button[data-automation-id="submitButton"]');
@@ -147,18 +198,26 @@ app.post("/webhook", async (req, res) => {
       if (!webhook_event || !webhook_event.message) continue;
 
       const senderId = webhook_event.sender.id;
-      
-      // Captures text whether typed manually or clicked via Quick Reply payload
       const text = (webhook_event.message.quick_reply?.payload || webhook_event.message.text)?.trim();
 
       if (!text) continue;
 
       logStep("MSG_IN", `From Sender [${senderId}]: "${text}"`);
 
-      // Case-insensitive trigger: "add ", "ADD ", "Add "
+      // Command trigger: "Add [Item Name]"
       if (text.toLowerCase().startsWith("add ")) {
+        if (userSessions[senderId]?.timer) {
+          clearTimeout(userSessions[senderId].timer);
+        }
+
         const itemTitle = text.substring(4).trim();
-        userSessions[senderId] = { step: "PRICE", data: { name: itemTitle } };
+        userSessions[senderId] = {
+          step: "PRICE",
+          data: { name: itemTitle, price: "", quantity: "", category: "", status: "", url: "" },
+          timer: null
+        };
+
+        resetSessionTimer(senderId);
         logStep("SESSION", `Started entry for "${itemTitle}" [User: ${senderId}]`);
         await sendMessage(senderId, `Pridedama: "${itemTitle}". Kokia kaina už vienetą?`);
         continue;
@@ -172,47 +231,78 @@ app.post("/webhook", async (req, res) => {
 
       // Step-by-step state machine
       switch (session.step) {
-        case "PRICE":
-          session.data.price = parseFloat(text.replace(",", ".")) || 0;
+        case "PRICE": {
+          if (isSkipInput(text)) {
+            session.data.price = "";
+          } else if (isValidPositiveNumber(text)) {
+            session.data.price = text.replace(",", ".").trim();
+          } else {
+            await sendMessage(
+              senderId,
+              "Neteisinga kaina! Įveskite teigiamą skaičių (pvz., 12.50 arba 12,50) arba parašykite 'nie' / 'nwm' norėdami praleisti."
+            );
+            return; // Keep user on PRICE step
+          }
+
           session.step = "QUANTITY";
-          logStep("SESSION", `User ${senderId} set price: ${session.data.price}`);
+          resetSessionTimer(senderId);
+
+          logStep("SESSION", `User ${senderId} set price: ${session.data.price || "[SKIPPED]"}`);
           await sendMessage(senderId, "Koks kiekis?");
           break;
+        }
 
-        case "QUANTITY":
-          session.data.quantity = parseInt(text) || 1;
+        case "QUANTITY": {
+          if (isSkipInput(text)) {
+            session.data.quantity = "";
+          } else if (isValidPositiveInteger(text)) {
+            session.data.quantity = text.trim();
+          } else {
+            await sendMessage(
+              senderId,
+              "Neteisingas kiekis! Įveskite teigiamą sveikąjį skaičių (pvz., 1, 2, 5) arba parašykite 'nie' / 'nwm' norėdami praleisti."
+            );
+            return; // Keep user on QUANTITY step
+          }
+
           session.step = "CATEGORY";
-          logStep("SESSION", `User ${senderId} set quantity: ${session.data.quantity}`);
-          
-          // Sends text with Quick Reply buttons for Category
+          resetSessionTimer(senderId);
+
+          logStep("SESSION", `User ${senderId} set quantity: ${session.data.quantity || "[SKIPPED]"}`);
           await sendMessage(
             senderId,
             "Pasirinkite kategoriją arba įrašykite:",
             ["Robot", "Marketing"]
           );
           break;
+        }
 
         case "CATEGORY": {
-          const categories = {
-            "robot": "Robot",
-            "marketing": "Marketing"
-          };
-          const matchedCategory = categories[text.toLowerCase()];
+          if (isSkipInput(text)) {
+            session.data.category = "";
+          } else {
+            const categories = {
+              "robot": "Robot",
+              "marketing": "Marketing"
+            };
+            const matchedCategory = categories[text.toLowerCase()];
 
-          if (!matchedCategory) {
-            await sendMessage(
-              senderId,
-              "Netinkama kategorija! Galima rinktis tik iš pateiktų mygtukų:",
-              ["Robot", "Marketing"]
-            );
-            return;
+            if (!matchedCategory) {
+              await sendMessage(
+                senderId,
+                "Netinkama kategorija! Pasirinkite iš mygtukų arba parašykite 'nie' / 'nwm' norėdami praleisti:",
+                ["Robot", "Marketing"]
+              );
+              return;
+            }
+
+            session.data.category = matchedCategory;
           }
 
-          session.data.category = matchedCategory;
           session.step = "STATUS";
-          logStep("SESSION", `User ${senderId} set category: ${session.data.category}`);
-          
-          // Sends text with Quick Reply buttons for Status
+          resetSessionTimer(senderId);
+
+          logStep("SESSION", `User ${senderId} set category: ${session.data.category || "[SKIPPED]"}`);
           await sendMessage(
             senderId,
             "Pasirinkite statusą arba įrašykite:",
@@ -222,33 +312,44 @@ app.post("/webhook", async (req, res) => {
         }
 
         case "STATUS": {
-          const statuses = {
-            "bardzo trzeba": "Bardzo trzeba",
-            "trzeba": "Trzeba",
-            "zakazano": "Zakazano",
-            "mami": "Mami"
-          };
-          const matchedStatus = statuses[text.toLowerCase()];
+          if (isSkipInput(text)) {
+            session.data.status = "";
+          } else {
+            const statuses = {
+              "bardzo trzeba": "Bardzo trzeba",
+              "trzeba": "Trzeba",
+              "zakazano": "Zakazano",
+              "mami": "Mami"
+            };
+            const matchedStatus = statuses[text.toLowerCase()];
 
-          if (!matchedStatus) {
-            await sendMessage(
-              senderId,
-              "Netinkamas statusas! Galima rinktis tik iš pateiktų mygtukų:",
-              ["Bardzo trzeba", "Trzeba", "Zakazano", "Mami"]
-            );
-            return;
+            if (!matchedStatus) {
+              await sendMessage(
+                senderId,
+                "Netinkamas statusas! Pasirinkite iš mygtukų arba parašykite 'nie' / 'nwm' norėdami praleisti:",
+                ["Bardzo trzeba", "Trzeba", "Zakazano", "Mami"]
+              );
+              return;
+            }
+
+            session.data.status = matchedStatus;
           }
 
-          session.data.status = matchedStatus;
           session.step = "URL";
-          logStep("SESSION", `User ${senderId} set status: ${session.data.status}`);
+          resetSessionTimer(senderId);
+
+          logStep("SESSION", `User ${senderId} set status: ${session.data.status || "[SKIPPED]"}`);
           await sendMessage(senderId, "Atsiųskite nuorodą (sylka):");
           break;
         }
 
         case "URL":
-          session.data.url = text;
-          logStep("SESSION", `User ${senderId} set URL: ${session.data.url}. Submitting form...`);
+          if (session.timer) {
+            clearTimeout(session.timer);
+          }
+
+          session.data.url = isSkipInput(text) ? "" : text;
+          logStep("SESSION", `User ${senderId} set URL: ${session.data.url || "[SKIPPED]"}. Submitting form...`);
           await sendMessage(senderId, "⏳ Saugoma į Excel lentelę...");
           
           try {
