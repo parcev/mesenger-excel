@@ -1,5 +1,5 @@
 {
-  "name": "messenger-excel-bot",
+  "name": "messenger-excel",
   "version": "1.0.0",
   "description": "Facebook Messenger bot for updating OneDrive Excel via Playwright Microsoft Form automation",
   "main": "index.js",
