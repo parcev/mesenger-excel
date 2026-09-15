@@ -82,7 +82,7 @@ function resetSessionTimer(senderId) {
 
     try {
       await fillFormAndSubmit(session.data);
-      await sendMessage(senderId, "✅ Automatiškai išsaugota į Excel lentelę dėl neaktyvumo!");
+      await sendMessage(senderId, "✅ Automatycznie sochraneno w excelu, bo TY był nie aktywny!");
       logStep("TIMEOUT_SUCCESS", `Auto-submitted partial entry "${session.data.name}" for User ${senderId}`);
     } catch (err) {
       logStep("TIMEOUT_ERR", `Failed auto-submit on timeout: ${err.message}`);
@@ -108,40 +108,39 @@ async function fillFormAndSubmit(data) {
     const page = await context.newPage();
 
     logStep("PLAYWRIGHT_NAVIGATE", `Loading form URL: ${MS_FORM_URL}`);
-    await page.goto(MS_FORM_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+    // Wait until network traffic settles so dynamic scripts render fully
+    await page.goto(MS_FORM_URL, { waitUntil: "networkidle", timeout: 30000 });
 
-    logStep("PLAYWRIGHT_WAIT", "Waiting for input text fields to render...");
-    const inputSelector = 'input[type="text"]';
-    await page.waitForSelector(inputSelector, { state: "visible", timeout: 15000 });
+    logStep("PLAYWRIGHT_WAIT", "Waiting for text input fields to render...");
+    
+    // Microsoft Forms uses 'textbox' roles or specific automation IDs for input fields
+    const inputs = page.getByRole("textbox");
+    await inputs.first().waitFor({ state: "visible", timeout: 20000 });
 
-    const inputs = page.locator(inputSelector);
     const count = await inputs.count();
     logStep("PLAYWRIGHT_VERIFY", `Found ${count} text input fields on page.`);
 
-    if (count < 7) {
-      throw new Error(`Form mismatch! Expected at least 7 fields, found ${count}.`);
+    if (count < 6) {
+      throw new Error(`Form mismatch! Expected at least 6 fields, found ${count}.`);
     }
 
-    logStep("PLAYWRIGHT_FILL", `[1/7] Setting Nazwa: "${data.name || ""}"`);
+    logStep("PLAYWRIGHT_FILL", `[1/6] Setting Name: "${data.name || ""}"`);
     await inputs.nth(0).fill(data.name || "");
 
-    logStep("PLAYWRIGHT_FILL", `[2/7] Setting Nazwa copy: "${data.name || ""}"`);
-    await inputs.nth(1).fill(data.name || "");
+    logStep("PLAYWRIGHT_FILL", `[2/6] Setting Price: "${data.price || ""}"`);
+    await inputs.nth(1).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[3/7] Setting Price: "${data.price || ""}"`);
-    await inputs.nth(2).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
+    logStep("PLAYWRIGHT_FILL", `[3/6] Setting Quantity: "${data.quantity || ""}"`);
+    await inputs.nth(2).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[4/7] Setting Quantity: "${data.quantity || ""}"`);
-    await inputs.nth(3).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
+    logStep("PLAYWRIGHT_FILL", `[4/6] Setting Category: "${data.category || ""}"`);
+    await inputs.nth(3).fill(data.category || "");
 
-    logStep("PLAYWRIGHT_FILL", `[5/7] Setting Category: "${data.category || ""}"`);
-    await inputs.nth(4).fill(data.category || "");
+    logStep("PLAYWRIGHT_FILL", `[5/6] Setting Status: "${data.status || ""}"`);
+    await inputs.nth(4).fill(data.status || "");
 
-    logStep("PLAYWRIGHT_FILL", `[6/7] Setting Status: "${data.status || ""}"`);
-    await inputs.nth(5).fill(data.status || "");
-
-    logStep("PLAYWRIGHT_FILL", `[7/7] Setting URL: "${data.url || ""}"`);
-    await inputs.nth(6).fill(data.url || "");
+    logStep("PLAYWRIGHT_FILL", `[6/6] Setting URL: "${data.url || ""}"`);
+    await inputs.nth(5).fill(data.url || "");
 
     logStep("PLAYWRIGHT_SUBMIT", "Searching for submit button...");
     const submitBtn = page.locator('button[data-automation-id="submitButton"]');
@@ -158,16 +157,6 @@ async function fillFormAndSubmit(data) {
 
   } catch (err) {
     logStep("PLAYWRIGHT_ERROR", `Execution failed: ${err.message}`);
-    if (browser) {
-      try {
-        const pages = browser.contexts()[0]?.pages();
-        if (pages && pages.length > 0) {
-          logStep("PLAYWRIGHT_DIAGNOSTIC", `Page title: "${await pages[0].title()}" | Current URL: ${pages[0].url()}`);
-        }
-      } catch (diagErr) {
-        logStep("PLAYWRIGHT_DIAGNOSTIC_ERR", `Could not read state: ${diagErr.message}`);
-      }
-    }
     throw err;
   } finally {
     if (browser) {
@@ -176,6 +165,7 @@ async function fillFormAndSubmit(data) {
     }
   }
 }
+
 
 // Facebook Webhook Handshake Verification
 app.get("/webhook", (req, res) => {
@@ -355,7 +345,7 @@ app.post("/webhook", async (req, res) => {
           
           try {
             await fillFormAndSubmit(session.data);
-            await sendMessage(senderId, "✅ Sėkmingai pridėta į Excel lentelę!");
+            await sendMessage(senderId, "✅ Z powodzeniem zapisano do Excelu!");
             logStep("COMPLETED", `Added item "${session.data.name}" for User ${senderId}`);
           } catch (err) {
             logStep("CRITICAL_ERR", `Failed to complete entry: ${err.message}`);
