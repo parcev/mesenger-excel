@@ -1,4 +1,4 @@
-FROM node:20-jammy
+FROM node:20
 
 # Set working directory inside container
 WORKDIR /usr/src/app
@@ -9,7 +9,7 @@ COPY package*.json ./
 # Install application dependencies
 RUN npm install --production
 
-# Install Playwright Chromium browser binaries along with all required Linux OS libraries
+# Install Playwright Chromium browser binaries along with required Linux OS libraries
 RUN npx playwright install --with-deps chromium
 
 # Copy remaining source code
