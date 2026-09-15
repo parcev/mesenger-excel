@@ -251,7 +251,7 @@ app.post("/webhook", async (req, res) => {
           } else {
             await sendMessage(
               senderId,
-              "Neteisingas kiekis! Įveskite teigiamą sveikąjį skaičių (pvz., 1, 2, 5) arba parašykite 'nie' / 'nwm' norėdami praleisti."
+              "Nieprawidłowa ilosc! Napisz cyfra. Jeżeli nie wiesz napisz 'nie' albo 'nwm'
             );
             return;
           }
@@ -262,7 +262,7 @@ app.post("/webhook", async (req, res) => {
           logStep("SESSION", `User ${senderId} set quantity: ${session.data.quantity || "[SKIPPED]"}`);
           await sendMessage(
             senderId,
-            "Pasirinkite kategoriją arba įrašykite:",
+            "Jaka kategorija?",
             ["Robot", "Marketing"]
           );
           break;
@@ -330,7 +330,7 @@ app.post("/webhook", async (req, res) => {
           resetSessionTimer(senderId);
 
           logStep("SESSION", `User ${senderId} set status: ${session.data.status || "[SKIPPED]"}`);
-          await sendMessage(senderId, "Atsiųskite nuorodą (sylka):");
+          await sendMessage(senderId, "Atsiųskite nuorodą (sylka):", []);
           break;
         }
 
@@ -341,11 +341,11 @@ app.post("/webhook", async (req, res) => {
 
           session.data.url = isSkipInput(text) ? "" : text;
           logStep("SESSION", `User ${senderId} set URL: ${session.data.url || "[SKIPPED]"}. Submitting form...`);
-          await sendMessage(senderId, "⏳ Saugoma į Excel lentelę...");
+          await sendMessage(senderId, "⏳ Zapisuja do Excela...");
           
           try {
             await fillFormAndSubmit(session.data);
-            await sendMessage(senderId, "✅ Z powodzeniem zapisano do Excelu!");
+            await sendMessage(senderId, "✅ Udaczna zapisano do Excelu!");
             logStep("COMPLETED", `Added item "${session.data.name}" for User ${senderId}`);
           } catch (err) {
             logStep("CRITICAL_ERR", `Failed to complete entry: ${err.message}`);
