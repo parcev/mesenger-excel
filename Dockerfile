@@ -1,5 +1,4 @@
-# Use official Microsoft Playwright image with Node.js 20 and pre-installed browser dependencies
-FROM mcr.microsoft.com/playwright/node:20-jammy
+FROM node:20-jammy
 
 # Set working directory inside container
 WORKDIR /usr/src/app
@@ -10,8 +9,8 @@ COPY package*.json ./
 # Install application dependencies
 RUN npm install --production
 
-# Install Playwright Chromium browser binaries
-RUN npx playwright install chromium
+# Install Playwright Chromium browser binaries along with all required Linux OS libraries
+RUN npx playwright install --with-deps chromium
 
 # Copy remaining source code
 COPY . .
