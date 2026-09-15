@@ -21,7 +21,6 @@ function isSkipInput(text) {
 // Validation Helper Functions
 function isValidPositiveNumber(input) {
   const sanitized = input.replace(",", ".").trim();
-  // Ensures strictly positive number format (integer or decimal)
   if (!/^\d+(\.\d+)?$/.test(sanitized)) return false;
   const num = parseFloat(sanitized);
   return !isNaN(num) && num > 0;
@@ -29,7 +28,6 @@ function isValidPositiveNumber(input) {
 
 function isValidPositiveInteger(input) {
   const sanitized = input.trim();
-  // Ensures strictly positive whole number (1, 2, 3...)
   return /^[1-9]\d*$/.test(sanitized);
 }
 
@@ -120,27 +118,30 @@ async function fillFormAndSubmit(data) {
     const count = await inputs.count();
     logStep("PLAYWRIGHT_VERIFY", `Found ${count} text input fields on page.`);
 
-    if (count < 6) {
-      throw new Error(`Form mismatch! Expected at least 6 fields, found ${count}.`);
+    if (count < 7) {
+      throw new Error(`Form mismatch! Expected at least 7 fields, found ${count}.`);
     }
 
-    logStep("PLAYWRIGHT_FILL", `[1/6] Setting Name: "${data.name || ""}"`);
+    logStep("PLAYWRIGHT_FILL", `[1/7] Setting Nazwa: "${data.name || ""}"`);
     await inputs.nth(0).fill(data.name || "");
 
-    logStep("PLAYWRIGHT_FILL", `[2/6] Setting Price: "${data.price || ""}"`);
-    await inputs.nth(1).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
+    logStep("PLAYWRIGHT_FILL", `[2/7] Setting Nazwa copy: "${data.name || ""}"`);
+    await inputs.nth(1).fill(data.name || "");
 
-    logStep("PLAYWRIGHT_FILL", `[3/6] Setting Quantity: "${data.quantity || ""}"`);
-    await inputs.nth(2).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
+    logStep("PLAYWRIGHT_FILL", `[3/7] Setting Price: "${data.price || ""}"`);
+    await inputs.nth(2).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[4/6] Setting Category: "${data.category || ""}"`);
-    await inputs.nth(3).fill(data.category || "");
+    logStep("PLAYWRIGHT_FILL", `[4/7] Setting Quantity: "${data.quantity || ""}"`);
+    await inputs.nth(3).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[5/6] Setting Status: "${data.status || ""}"`);
-    await inputs.nth(4).fill(data.status || "");
+    logStep("PLAYWRIGHT_FILL", `[5/7] Setting Category: "${data.category || ""}"`);
+    await inputs.nth(4).fill(data.category || "");
 
-    logStep("PLAYWRIGHT_FILL", `[6/6] Setting URL: "${data.url || ""}"`);
-    await inputs.nth(5).fill(data.url || "");
+    logStep("PLAYWRIGHT_FILL", `[6/7] Setting Status: "${data.status || ""}"`);
+    await inputs.nth(5).fill(data.status || "");
+
+    logStep("PLAYWRIGHT_FILL", `[7/7] Setting URL: "${data.url || ""}"`);
+    await inputs.nth(6).fill(data.url || "");
 
     logStep("PLAYWRIGHT_SUBMIT", "Searching for submit button...");
     const submitBtn = page.locator('button[data-automation-id="submitButton"]');
@@ -241,7 +242,7 @@ app.post("/webhook", async (req, res) => {
               senderId,
               "Neteisinga kaina! Įveskite teigiamą skaičių (pvz., 12.50 arba 12,50) arba parašykite 'nie' / 'nwm' norėdami praleisti."
             );
-            return; // Keep user on PRICE step
+            return;
           }
 
           session.step = "QUANTITY";
@@ -262,7 +263,7 @@ app.post("/webhook", async (req, res) => {
               senderId,
               "Neteisingas kiekis! Įveskite teigiamą sveikąjį skaičių (pvz., 1, 2, 5) arba parašykite 'nie' / 'nwm' norėdami praleisti."
             );
-            return; // Keep user on QUANTITY step
+            return;
           }
 
           session.step = "CATEGORY";
@@ -367,8 +368,6 @@ app.post("/webhook", async (req, res) => {
     }
   }
 });
-app.get("/", (req, res) => {
-  res.send("Bot is up and running!");
-});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => logStep("SERVER", `Server listening on port ${PORT}`));
