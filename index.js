@@ -367,6 +367,8 @@ app.post("/webhook", async (req, res) => {
     }
   }
 });
-
+app.get("/", (req, res) => {
+  res.send("Bot is up and running!");
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => logStep("SERVER", `Server listening on port ${PORT}`));
