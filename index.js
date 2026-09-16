@@ -254,7 +254,7 @@ app.post("/webhook", async (req, res) => {
           } else {
             await sendMessage(
               senderId,
-              "Nieprawidłowa ilosc! Napisz cyfra. Jeżeli nie wiesz napisz 'nie' albo 'nwm'
+              "Nieprawidłowa ilosc! Napisz cyfra. Jeżeli nie wiesz napisz 'nie' albo 'nwm'"
             );
             return;
           }
