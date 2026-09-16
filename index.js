@@ -139,11 +139,11 @@ async function fillFormAndSubmit(data) {
     logStep("PLAYWRIGHT_FILL", `[5/7] Setting Status: "${data.status || ""}"`);
     await inputs.nth(4).fill(data.status || "");
 
-    logStep("PLAYWRIGHT_FILL", `[6/7] Setting Status: "${data.status || ""}"`);
-    await inputs.nth(5).fill(data.status || "");
+    logStep("PLAYWRIGHT_FILL", `[6/7] Setting Price: "${data.price || ""}"`);
+    await inputs.nth(5).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[7/7] Setting URL: "${data.url || ""}"`);
-    await inputs.nth(6).fill(data.url || "");
+    logStep("PLAYWRIGHT_FILL", `[7/7] Setting Category: "${data.category || ""}"`);
+    await inputs.nth(6).fill(data.category || "");
 
     logStep("PLAYWRIGHT_SUBMIT", "Searching for submit button...");
     const submitBtn = page.locator('button[data-automation-id="submitButton"]');
@@ -199,7 +199,7 @@ app.post("/webhook", async (req, res) => {
       logStep("MSG_IN", `From Sender [${senderId}]: "${text}"`);
 
       // Command trigger: "Add [Item Name]"
-      if (text.toLowerCase().startsWith("add ")) {
+      if (text.toLowerCase().startsWith("add ") || text.toLowerCase().startsWith("dobaw ")) {
         if (userSessions[senderId]?.timer) {
           clearTimeout(userSessions[senderId].timer);
         }
