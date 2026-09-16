@@ -284,7 +284,7 @@ app.post("/webhook", async (req, res) => {
             if (!matchedCategory) {
               await sendMessage(
                 senderId,
-                "Netinkama kategorija! Pasirinkite iš mygtukų arba parašykite 'nie' / 'nwm' norėdami praleisti:",
+                "Niprawidlowa kategorija! Wybierz jakaš knopka. Jeżeli nie wiesz, napisz 'nie' albo 'xz'",
                 ["Robot", "Marketing"]
               );
               return;
@@ -299,7 +299,7 @@ app.post("/webhook", async (req, res) => {
           logStep("SESSION", `User ${senderId} set category: ${session.data.category || "[SKIPPED]"}`);
           await sendMessage(
             senderId,
-            "Pasirinkite statusą arba įrašykite:",
+            "Wybierz status:",
             ["Bardzo trzeba", "Trzeba", "Zakazano", "Mami"]
           );
           break;
@@ -320,7 +320,7 @@ app.post("/webhook", async (req, res) => {
             if (!matchedStatus) {
               await sendMessage(
                 senderId,
-                "Netinkamas statusas! Pasirinkite iš mygtukų arba parašykite 'nie' / 'nwm' norėdami praleisti:",
+                "Nieprawidlowy status! Wybierz jakaś knopka.",
                 ["Bardzo trzeba", "Trzeba", "Zakazano", "Mami"]
               );
               return;
@@ -333,7 +333,7 @@ app.post("/webhook", async (req, res) => {
           resetSessionTimer(senderId);
 
           logStep("SESSION", `User ${senderId} set status: ${session.data.status || "[SKIPPED]"}`);
-          await sendMessage(senderId, "Atsiųskite nuorodą (sylka):");
+          await sendMessage(senderId, "Skiń sylka:");
           break;
         }
 
@@ -352,7 +352,7 @@ app.post("/webhook", async (req, res) => {
             logStep("COMPLETED", `Added item "${session.data.name}" for User ${senderId}`);
           } catch (err) {
             logStep("CRITICAL_ERR", `Failed to complete entry: ${err.message}`);
-            await sendMessage(senderId, `❌ Klaida įrašant į lentelę: ${err.message.substring(0, 100)}`);
+            await sendMessage(senderId, `❌ oszybka zapisujac do excela (faTal ERROR!!!!!): ${err.message.substring(0, 100)}`);
           }
           
           delete userSessions[senderId];
