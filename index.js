@@ -333,7 +333,7 @@ app.post("/webhook", async (req, res) => {
           resetSessionTimer(senderId);
 
           logStep("SESSION", `User ${senderId} set status: ${session.data.status || "[SKIPPED]"}`);
-          await sendMessage(senderId, "Atsiųskite nuorodą (sylka):", []);
+          await sendMessage(senderId, "Atsiųskite nuorodą (sylka):");
           break;
         }
 
