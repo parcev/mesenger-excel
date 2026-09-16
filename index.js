@@ -220,7 +220,7 @@ app.post("/webhook", async (req, res) => {
 
         resetSessionTimer(senderId);
         logStep("SESSION", `Started entry for "${itemTitle}" [User: ${senderId}]`);
-        await sendMessage(senderId, `Dobawiam "${itemTitle}". Ile kosztuji?`);
+        await sendMessage(senderId, `Ok. Ile kosztuji?`);
         continue;
       }
 
