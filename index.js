@@ -130,14 +130,14 @@ async function fillFormAndSubmit(data) {
     logStep("PLAYWRIGHT_FILL", `[2/7] Setting Name: "${data.name || ""}"`);
     await inputs.nth(1).fill(data.name || "");
 
-    logStep("PLAYWRIGHT_FILL", `[3/7] Setting Price: "${data.price || ""}"`);
-    await inputs.nth(2).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
+    logStep("PLAYWRIGHT_FILL", `[3/7] Setting Quantity: "${data.quantity || ""}"`);
+    await inputs.nth(2).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[4/7] Setting Quantity: "${data.quantity || ""}"`);
-    await inputs.nth(3).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
+    logStep("PLAYWRIGHT_FILL", `[4/7] Setting URL: "${data.url || ""}"`);
+    await inputs.nth(3).fill(data.url !== "" && data.url !== undefined ? String(data.url) : "");
 
-    logStep("PLAYWRIGHT_FILL", `[5/7] Setting Category: "${data.category || ""}"`);
-    await inputs.nth(4).fill(data.category || "");
+    logStep("PLAYWRIGHT_FILL", `[5/7] Setting Status: "${data.status || ""}"`);
+    await inputs.nth(4).fill(data.status || "");
 
     logStep("PLAYWRIGHT_FILL", `[6/7] Setting Status: "${data.status || ""}"`);
     await inputs.nth(5).fill(data.status || "");
