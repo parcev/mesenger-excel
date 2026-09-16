@@ -272,7 +272,7 @@ app.post("/webhook", async (req, res) => {
           logStep("SESSION", `User ${senderId} set quantity: ${session.data.quantity || "[SKIPPED]"}`);
           await sendMessage(
             senderId,
-            "Jaka kategorija?",
+            "Jaka kategorija:",
             ["Robot", "Marketing"]
           );
           break;
@@ -340,7 +340,7 @@ app.post("/webhook", async (req, res) => {
           resetSessionTimer(senderId);
 
           logStep("SESSION", `User ${senderId} set status: ${session.data.status || "[SKIPPED]"}`);
-          await sendMessage(senderId, "Skiń sylka:");
+          await sendMessage(senderId, "Skiń sylka");
           break;
         }
 
