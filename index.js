@@ -78,7 +78,7 @@ function resetSessionTimer(senderId) {
     if (!session) return;
 
     logStep("TIMEOUT", `8-minute inactivity limit reached for User [${senderId}]. Auto-submitting collected data...`);
-    await sendMessage(senderId, "⏳ 8 min. neaktyvumas: surinkti duomenys automatiškai saugomi į Excel...");
+    await sendMessage(senderId, "⏳ Ty hył za długo nieaktywny: sochraniejsta do excelu...");
 
     try {
       await fillFormAndSubmit(session.data);
@@ -86,7 +86,7 @@ function resetSessionTimer(senderId) {
       logStep("TIMEOUT_SUCCESS", `Auto-submitted partial entry "${session.data.name}" for User ${senderId}`);
     } catch (err) {
       logStep("TIMEOUT_ERR", `Failed auto-submit on timeout: ${err.message}`);
-      await sendMessage(senderId, `❌ Klaida automatiškai įrašant į lentelę: ${err.message.substring(0, 100)}`);
+      await sendMessage(senderId, `❌ oszybka zapisując do excelu: ${err.message.substring(0, 100)}`);
     }
 
     delete userSessions[senderId];
