@@ -204,11 +204,12 @@ app.post("/webhook", async (req, res) => {
           clearTimeout(userSessions[senderId].timer);
         }
 
+        let itemTitle;
         if (text.toLowerCase().startsWith("add ")) {
-          const itemTitle = text.substring(4).trim();
+          itemTitle = text.substring(4).trim();
         }
         else {
-          const itemTitle = text.substring(6).trim();
+          itemTitle = text.substring(6).trim();
         }
         
         userSessions[senderId] = {
