@@ -204,7 +204,13 @@ app.post("/webhook", async (req, res) => {
           clearTimeout(userSessions[senderId].timer);
         }
 
-        const itemTitle = text.substring(4).trim();
+        if (text.toLowerCase().startsWith("add ")) {
+          const itemTitle = text.substring(4).trim();
+        }
+        else {
+          const itemTitle = text.substring(6).trim();
+        }
+        
         userSessions[senderId] = {
           step: "PRICE",
           data: { name: itemTitle, price: "", quantity: "", category: "", status: "", url: "" },
