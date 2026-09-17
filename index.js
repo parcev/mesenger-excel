@@ -109,60 +109,72 @@ async function fillFormAndSubmit(data) {
     const page = await context.newPage();
 
     logStep("PLAYWRIGHT_NAVIGATE", `Loading form URL: ${MS_FORM_URL}`);
-    await page.goto(MS_FORM_URL, { waitUntil: "networkidle", timeout: 30000 });
 
-    logStep("PLAYWRIGHT_WAIT", "Waiting for text input fields to render...");
-    
+    await page.goto(MS_FORM_URL, {
+      waitUntil: "networkidle",
+      timeout: 30000
+    });
+
     const inputs = page.getByRole("textbox");
-    await inputs.first().waitFor({ state: "visible", timeout: 20000 });
+
+    await inputs.first().waitFor({
+      state: "visible",
+      timeout: 20000
+    });
 
     const count = await inputs.count();
+
     logStep("PLAYWRIGHT_VERIFY", `Found ${count} text input fields on page.`);
 
-    if (count < 7) {
-      throw new Error(`Form mismatch! Expected at least 7 fields, found ${count}.`);
+    if (count < 8) {
+      throw new Error(`Form mismatch! Expected at least 8 fields, found ${count}.`);
     }
 
-    logStep("PLAYWRIGHT_FILL", `[1/7] Setting Name: "${data.name || ""}"`);
     await inputs.nth(0).fill(data.name || "");
-
-    logStep("PLAYWRIGHT_FILL", `[2/7] Setting Name: "${data.name || ""}"`);
     await inputs.nth(1).fill(data.name || "");
-
-    logStep("PLAYWRIGHT_FILL", `[3/7] Setting Quantity: "${data.quantity || ""}"`);
-    await inputs.nth(2).fill(data.quantity !== "" && data.quantity !== undefined ? String(data.quantity) : "");
-
-    logStep("PLAYWRIGHT_FILL", `[4/7] Setting URL: "${data.url || ""}"`);
-    await inputs.nth(3).fill(data.url !== "" && data.url !== undefined ? String(data.url) : "");
-
-    logStep("PLAYWRIGHT_FILL", `[5/7] Setting Status: "${data.status || ""}"`);
+    await inputs.nth(2).fill(
+      data.quantity !== "" && data.quantity !== undefined
+        ? String(data.quantity)
+        : ""
+    );
+    await inputs.nth(3).fill(
+      data.url !== "" && data.url !== undefined
+        ? String(data.url)
+        : ""
+    );
     await inputs.nth(4).fill(data.status || "");
+    await inputs.nth(5).fill(
+      data.price !== "" && data.price !== undefined
+        ? String(data.price)
+        : ""
+    );
 
-    logStep("PLAYWRIGHT_FILL", `[6/7] Setting Price: "${data.price || ""}"`);
-    await inputs.nth(5).fill(data.price !== "" && data.price !== undefined ? String(data.price) : "");
+    await inputs.nth(6).fill("");
+    await inputs.nth(7).fill(data.category || "");
 
-    logStep("PLAYWRIGHT_FILL", `[7/7] Setting Category: "${data.category || ""}"`);
-    await inputs.nth(6).fill(data.category || "");
+    const submitBtn = page.locator(
+      'button[data-automation-id="submitButton"]'
+    );
 
-    logStep("PLAYWRIGHT_SUBMIT", "Searching for submit button...");
-    const submitBtn = page.locator('button[data-automation-id="submitButton"]');
-    await submitBtn.waitFor({ state: "visible", timeout: 5000 });
+    await submitBtn.waitFor({
+      state: "visible",
+      timeout: 5000
+    });
 
-    logStep("PLAYWRIGHT_SUBMIT", "Clicking submit button...");
     await submitBtn.click();
 
-    logStep("PLAYWRIGHT_CONFIRM", "Waiting for post-submit processing...");
     await page.waitForTimeout(3000);
 
     logStep("PLAYWRIGHT_SUCCESS", "Form submitted successfully!");
+
     return true;
 
   } catch (err) {
     logStep("PLAYWRIGHT_ERROR", `Execution failed: ${err.message}`);
     throw err;
+
   } finally {
     if (browser) {
-      logStep("PLAYWRIGHT_CLEANUP", "Closing Chromium browser process...");
       await browser.close();
     }
   }
