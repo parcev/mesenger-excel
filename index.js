@@ -35,6 +35,7 @@ function isValidPositiveInteger(input) {
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const MS_FORM_URL = process.env.MS_FORM_URL;
+const MS_SPONSOR_FORM_URL = process.env.MS_SPONSOR_FORM_URL;
 
 // Structured Logger with ISO Timestamps
 function logStep(step, message) {
@@ -108,12 +109,10 @@ async function fillFormAndSubmit(data) {
     const page = await context.newPage();
 
     logStep("PLAYWRIGHT_NAVIGATE", `Loading form URL: ${MS_FORM_URL}`);
-    // Wait until network traffic settles so dynamic scripts render fully
     await page.goto(MS_FORM_URL, { waitUntil: "networkidle", timeout: 30000 });
 
     logStep("PLAYWRIGHT_WAIT", "Waiting for text input fields to render...");
     
-    // Microsoft Forms uses 'textbox' roles or specific automation IDs for input fields
     const inputs = page.getByRole("textbox");
     await inputs.first().waitFor({ state: "visible", timeout: 20000 });
 
@@ -169,6 +168,53 @@ async function fillFormAndSubmit(data) {
   }
 }
 
+// Playwright Browser Automation for Sponsor Microsoft Form
+async function fillSponsorFormAndSubmit(sponsorName) {
+  logStep("PLAYWRIGHT_SPONSOR_INIT", "Launching headless Chromium browser for Sponsor form...");
+  let browser = null;
+
+  try {
+    if (!MS_SPONSOR_FORM_URL) {
+      throw new Error("MS_SPONSOR_FORM_URL environment variable is not defined!");
+    }
+
+    browser = await chromium.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    logStep("PLAYWRIGHT_SPONSOR_NAV", `Loading Sponsor form URL: ${MS_SPONSOR_FORM_URL}`);
+    await page.goto(MS_SPONSOR_FORM_URL, { waitUntil: "networkidle", timeout: 30000 });
+
+    const inputs = page.getByRole("textbox");
+    await inputs.first().waitFor({ state: "visible", timeout: 20000 });
+
+    logStep("PLAYWRIGHT_SPONSOR_FILL", `Setting Sponsor Name: "${sponsorName}"`);
+    await inputs.first().fill(sponsorName);
+
+    logStep("PLAYWRIGHT_SPONSOR_SUBMIT", "Searching for submit button...");
+    const submitBtn = page.locator('button[data-automation-id="submitButton"]');
+    await submitBtn.waitFor({ state: "visible", timeout: 5000 });
+
+    logStep("PLAYWRIGHT_SPONSOR_SUBMIT", "Clicking submit button...");
+    await submitBtn.click();
+
+    await page.waitForTimeout(3000);
+    logStep("PLAYWRIGHT_SPONSOR_SUCCESS", "Sponsor form submitted successfully!");
+    return true;
+
+  } catch (err) {
+    logStep("PLAYWRIGHT_SPONSOR_ERROR", `Sponsor submission failed: ${err.message}`);
+    throw err;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
 
 // Facebook Webhook Handshake Verification
 app.get("/webhook", (req, res) => {
@@ -198,17 +244,47 @@ app.post("/webhook", async (req, res) => {
 
       logStep("MSG_IN", `From Sender [${senderId}]: "${text}"`);
 
-      // Command trigger: "Add [Item Name]"
-      if (text.toLowerCase().startsWith("add ") || text.toLowerCase().startsWith("dobaw ")) {
+      // Sponsor command trigger: "sponsor <name>" or "s <name>"
+      const lowerText = text.toLowerCase();
+      let sponsorName = null;
+
+      if (lowerText.startsWith("sponsor ")) {
+        sponsorName = text.substring(8).trim();
+      } else if (lowerText.startsWith("s ")) {
+        sponsorName = text.substring(2).trim();
+      }
+
+      if (sponsorName) {
+        logStep("SPONSOR_CMD", `Sponsor command received for: "${sponsorName}"`);
+        try {
+  await fillSponsorFormAndSubmit(sponsorName);
+
+  await sendMessage(senderId, "✅ Sponsor zapisany!");
+  logStep("SPONSOR_SUCCESS", `Sponsor "${sponsorName}" saved successfully.`);
+} catch (err) {
+  logStep("SPONSOR_ERR", `Failed to save sponsor: ${err.message}`);
+
+  await sendMessage(
+    senderId,
+    `❌ Nie udało się zapisać sponsora: ${err.message.substring(0, 100)}`
+  );
+}
+
+continue;
+
+        continue;
+      }
+
+      // Command trigger: "Add [Item Name]" or "Dobaw [Item Name]"
+      if (lowerText.startsWith("add ") || lowerText.startsWith("dobaw ")) {
         if (userSessions[senderId]?.timer) {
           clearTimeout(userSessions[senderId].timer);
         }
 
         let itemTitle;
-        if (text.toLowerCase().startsWith("add ")) {
+        if (lowerText.startsWith("add ")) {
           itemTitle = text.substring(4).trim();
-        }
-        else {
+        } else {
           itemTitle = text.substring(6).trim();
         }
         
@@ -226,7 +302,6 @@ app.post("/webhook", async (req, res) => {
 
       const session = userSessions[senderId];
       if (!session) {
-        //await sendMessage(senderId, "Parašykite 'Add [Pavadinimas]', kad pradėtumėte naujo daikto įvedimą.");
         continue;
       }
 
