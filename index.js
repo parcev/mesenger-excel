@@ -12,7 +12,7 @@ const userSessions = {};
 const INACTIVITY_TIMEOUT_MS = 8 * 60 * 1000;
 
 // Keywords that allow skipping any question
-const SKIP_WORDS = ["nie", "nwm", "niwiem", "nie wiem", "ni wiem", "hz", "idk", "xz"];
+const SKIP_WORDS = ["nie", "nwm", "niwiem", "nie wiem", "ni wiem", "hz", "idk", "xz", "nima", "niwiem", "niema", "nie ma"];
 
 function isSkipInput(text) {
   return SKIP_WORDS.includes(text.toLowerCase());
