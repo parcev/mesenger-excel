@@ -18,12 +18,25 @@ function isSkipInput(text) {
   return SKIP_WORDS.includes(text.toLowerCase());
 }
 
-// Validation Helper Functions
-function isValidPositiveNumber(input) {
-  const sanitized = input.replace(",", ".").trim();
-  if (!/^\d+(\.\d+)?$/.test(sanitized)) return false;
+// Pomocnicza funkcja do walidacji i formatowania ceny
+function parsePrice(input) {
+  const trimmed = input.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Obsługa wartości "Bezplatnie" / "Bezpłatnie" -> 0
+  if (lower === "bezplatnie" || lower === "bezpłatnie") {
+    return "0";
+  }
+
+  // Zamiana przecinka na kropkę wyłącznie na potrzeby walidacji liczbowej
+  const sanitized = trimmed.replace(",", ".");
+  if (!/^\d+(\.\d+)?$/.test(sanitized)) return null;
+
   const num = parseFloat(sanitized);
-  return !isNaN(num) && num > 0;
+  if (isNaN(num) || num < 0) return null;
+
+  // Zamiana kropek na przecinki w zapisanym wyniku (np. 12.50 -> 12,50)
+  return trimmed.replace(".", ",");
 }
 
 function isValidPositiveInteger(input) {
@@ -319,17 +332,20 @@ continue;
 
       // Step-by-step state machine
       switch (session.step) {
-        case "PRICE": {
+                case "PRICE": {
           if (isSkipInput(text)) {
             session.data.price = "";
-          } else if (isValidPositiveNumber(text)) {
-            session.data.price = text.replace(",", ".").trim();
           } else {
-            await sendMessage(
-              senderId,
-              "Nieprawidłowa cena!  Napisz cyfra (np. 50,67). Jeśli nie wiesz, pisz 'nie' albo 'nwm'"
-            );
-            return;
+            const parsedPrice = parsePrice(text);
+            if (parsedPrice !== null) {
+              session.data.price = parsedPrice;
+            } else {
+              await sendMessage(
+                senderId,
+                "Nieprawidłowa cena! Napisz cyfrę (np. 50,67). Jeśli nie wiesz, pisz 'nie' albo 'nwm'"
+              );
+              return;
+            }
           }
 
           session.step = "QUANTITY";
@@ -339,6 +355,7 @@ continue;
           await sendMessage(senderId, "Skilki nada?");
           break;
         }
+
 
         case "QUANTITY": {
           if (isSkipInput(text)) {
