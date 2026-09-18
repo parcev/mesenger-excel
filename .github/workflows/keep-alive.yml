@@ -1,0 +1,18 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Schedule targeting ~07:30 to 22:00 EEST / Vilnius time (04:30 to 19:00 UTC)
+    # Starts at 04:33 UTC (07:33 EEST) and ends at 19:03 UTC (22:03 EEST)
+    - cron: '33,43,53 4 * * *'
+    - cron: '3,13,23,33,43,53 5-18 * * *'
+    - cron: '3 19 * * *'
+  workflow_dispatch: # Enables manual run button in GitHub UI
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Endpoint
+        run: |
+          curl -s --max-time 90 https://mesenger-excel-1.onrender.com/health || true
