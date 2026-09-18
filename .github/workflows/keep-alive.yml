@@ -1,18 +1,15 @@
-name: Keep Render Awake
+name: Morning Wake Up
 
 on:
   schedule:
-    # Schedule targeting ~07:30 to 22:00 EEST / Vilnius time (04:30 to 19:00 UTC)
-    # Starts at 04:33 UTC (07:33 EEST) and ends at 19:03 UTC (22:03 EEST)
-    - cron: '33,43,53 4 * * *'
-    - cron: '3,13,23,33,43,53 5-18 * * *'
-    - cron: '3 19 * * *'
-  workflow_dispatch: # Enables manual run button in GitHub UI
+    # Runs once daily at 04:25 UTC (07:25 AM Vilnius time)
+    - cron: '25 4 * * *'
+  workflow_dispatch:
 
 jobs:
-  ping:
+  wake-up:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render Endpoint
+      - name: Warm up Render Server
         run: |
-          curl -s --max-time 90 https://mesenger-excel-1.onrender.com/health || true
+          curl -s --max-time 120 https://mesenger-excel-1.onrender.com/ping || true
