@@ -12,4 +12,4 @@ jobs:
     steps:
       - name: Warm up Render Server
         run: |
-          curl -s --max-time 120 https://mesenger-excel-1.onrender.com/ping || true
+          curl -s --max-time 120 https://mesenger-excel-1.onrender.com/health || true
