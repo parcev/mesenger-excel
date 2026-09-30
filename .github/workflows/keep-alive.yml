@@ -3,7 +3,7 @@ name: Morning Wake Up
 on:
   schedule:
     # Runs once daily at 04:25 UTC (07:25 AM Vilnius time)
-    - cron: '00 0 * * *'
+    - cron: '45 23 * * *'
   workflow_dispatch:
 
 jobs:
